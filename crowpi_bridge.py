@@ -1,4 +1,5 @@
-# crowpi_bridge.py
+#!/usr/bin/env python3
+
 from flask import Flask, request, jsonify
 from crowpi_lcd import LCDModule
 
