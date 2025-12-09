@@ -22,6 +22,16 @@
                         opcode: 'clear',
                         blockType: Scratch.BlockType.COMMAND,
                         text: 'effacer le LCD'
+                    },
+                    {
+                        opcode: 'on',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'allumer le LCD'
+                    },
+                    {
+                        opcode: 'off',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'éteindre le LCD'
                     }
                 ]
             };
@@ -35,6 +45,14 @@
             this._post('/lcd/clear', {});
         }
 
+        on() {
+            this._post('/lcd/on', {});
+        }
+
+        off() {
+            this._post('/lcd/off', {});
+        }
+
         _post(path, data) {
             var xhr = new XMLHttpRequest();
             xhr.open('POST', 'http://127.0.0.1:3232' + path, true);
@@ -46,4 +64,3 @@
     Scratch.extensions.register(new CrowPi3LCD());
 
 })(Scratch);
-
