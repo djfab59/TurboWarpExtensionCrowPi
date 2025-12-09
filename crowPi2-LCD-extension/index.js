@@ -38,7 +38,8 @@
         }
 
         write(args) {
-            this._post('/lcd/write', { text: args.TEXT });
+            const text = (args.TEXT === undefined || args.TEXT === null) ? '' : String(args.TEXT);
+            this._post('/lcd/write', { text });
         }
 
         clear() {
