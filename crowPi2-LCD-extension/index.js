@@ -43,22 +43,24 @@
         }
 
         clear() {
-            this._post('/lcd/clear', {});
+            this._post('/lcd/clear');
         }
 
         on() {
-            this._post('/lcd/on', {});
+            this._post('/lcd/on');
         }
 
         off() {
-            this._post('/lcd/off', {});
+            this._post('/lcd/off');
         }
 
         _post(path, data) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', 'http://127.0.0.1:3232' + path, true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.send(JSON.stringify(data));
+            const options = { method: 'POST' };
+            if (data !== undefined) {
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify(data);
+            }
+            fetch('http://localhost:3232' + path, options);
         }
     }
 
