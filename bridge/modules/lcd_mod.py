@@ -102,11 +102,6 @@ class LCD:
         padding = " " * width
         display_text = padding + text + padding
 
-        print("speed:")
-        print(line)
-        print("speed:")
-        print(delay_ms)
-
         i = 0
         while not stop_event.is_set():
             window = display_text[i:i + width]
