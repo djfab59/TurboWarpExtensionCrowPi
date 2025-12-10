@@ -56,3 +56,23 @@ class LCDModule:
         self.lcd.display_string(line1[:16], 1)
         self.lcd.display_string(line2[:16], 2)
         time.sleep(0.02)
+
+    def scroll_text(self, line, text, delay_ms, stop_event):
+        if line not in (1, 2):
+            return
+
+        self.on()
+
+        width = 16
+        padding = " " * width
+        display_text = padding + text + padding
+
+        i = 0
+        while not stop_event.is_set():
+            window = display_text[i:i+width]
+            self.lcd.display_string(window, line)
+            time.sleep(delay_ms / 1000.0)
+
+            i += 1
+            if i > len(display_text) - width:
+                i = 0

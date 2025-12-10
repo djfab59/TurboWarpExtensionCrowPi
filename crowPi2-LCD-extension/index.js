@@ -9,6 +9,21 @@
             
                 blocks: [
                     {
+                        opcode: 'on',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'allumer le LCD'
+                    },
+                    {
+                        opcode: 'off',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'éteindre le LCD'
+                    },
+                    {
+                        opcode: 'clear',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'effacer le LCD'
+                    },
+                    {
                         opcode: 'write',
                         blockType: Scratch.BlockType.COMMAND,
                         text: 'afficher [TEXT] sur le LCD',
@@ -51,19 +66,29 @@
                         }
                     },
                     {
-                        opcode: 'clear',
+                        opcode: 'scrollStart',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: 'effacer le LCD'
+                        text: 'défilement texte [TEXT] ligne [LINE] vitesse [SPEED] ms',
+                        arguments: {
+                            TEXT: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: 'Hello CrowPi'
+                            },
+                            LINE: {
+                                type: Scratch.ArgumentType.NUMBER,
+                                defaultValue: 1,
+                                menu: 'lines'
+                            },
+                            SPEED: {
+                                type: Scratch.ArgumentType.NUMBER,
+                                defaultValue: 200
+                            }
+                        }
                     },
                     {
-                        opcode: 'on',
+                        opcode: 'scrollStop',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: 'allumer le LCD'
-                    },
-                    {
-                        opcode: 'off',
-                        blockType: Scratch.BlockType.COMMAND,
-                        text: 'éteindre le LCD'
+                        text: 'arrêter le défilement'
                     }
                 ],
                 menus: {
@@ -73,6 +98,18 @@
                     }
                 }
             };
+        }
+
+        on() {
+            this._post('/lcd/on', {});
+        }
+
+        off() {
+            this._post('/lcd/off', {});
+        }
+
+        clear() {
+            this._post('/lcd/clear', {});
         }
 
         write(args) {
@@ -92,18 +129,6 @@
                 line2: args.LINE2
             });
         }
-        
-        clear() {
-            this._post('/lcd/clear', {});
-        }
-
-        on() {
-            this._post('/lcd/on', {});
-        }
-
-        off() {
-            this._post('/lcd/off', {});
-        }
 
         _post(path, data) {
             var xhr = new XMLHttpRequest();
@@ -111,6 +136,19 @@
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify(data));
         }
+
+        scrollStart(args) {
+            this._post('/lcd/scroll/start', {
+                text: args.TEXT,
+                line: Number(args.LINE),
+                speed: Number(args.SPEED)
+            });
+        }
+        
+        scrollStop() {
+            this._post('/lcd/scroll/stop', {});
+        }        
+
     }
 
     Scratch.extensions.register(new CrowPi3LCD());
