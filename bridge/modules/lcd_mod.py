@@ -63,6 +63,8 @@ class LCD:
     # ---------- Writing helpers ----------
 
     def write(self, text):
+        # Accepte aussi bien des nombres que des chaînes (ex: bloc température)
+        text = str(text)
         self.on()
         self.line1 = text[:self.lcd_cols]
         self.line2 = ""
@@ -72,6 +74,7 @@ class LCD:
     def write_line(self, line, text):
         if line not in (1, 2):
             return
+        text = str(text)
         self.on()
         if line == 1:
             self.line1 = text[:self.lcd_cols]
@@ -80,6 +83,8 @@ class LCD:
         self._render()
 
     def write_both(self, line1, line2):
+        line1 = str(line1)
+        line2 = str(line2)
         self.on()
         self.line1 = line1[:self.lcd_cols]
         self.line2 = line2[:self.lcd_cols]
@@ -91,6 +96,8 @@ class LCD:
     def scroll(self, line, text, delay_ms, stop_event):
         if line not in (1, 2):
             return
+
+        text = str(text)
 
         self.on()
 

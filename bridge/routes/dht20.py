@@ -9,6 +9,12 @@ def read():
     with dht_lock:
         temp, hum = dht20.read()
 
+    # Arrondit proprement à 2 décimales si les valeurs sont numériques
+    if isinstance(temp, (int, float)):
+        temp = round(temp, 2)
+    if isinstance(hum, (int, float)):
+        hum = round(hum, 2)
+
     return jsonify(
         temperature=temp,
         humidity=hum
