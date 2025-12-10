@@ -2,7 +2,10 @@
 
 from flask import Flask, request, jsonify
 from crowpi_lcd import LCDModule
+import time
+import threading
 
+lcd_lock = threading.Lock()
 lcd = LCDModule()
 app = Flask(__name__)
 
@@ -13,24 +16,41 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response
 
-@app.route("/lcd/write", methods=["POST"])
+@app.route("/lcd/write", methods=["POST", "OPTIONS"])
 def lcd_write():
+    if request.method == "OPTIONS":
+        return '', 204
     text = request.json.get("text", "")
-    lcd.write(text)
+    with lcd_lock:
+        lcd.write(text)
+        time.sleep(0.05)
     return jsonify(ok=True)
 
-@app.route("/lcd/clear", methods=["POST"])
+@app.route("/lcd/clear", methods=["POST", "OPTIONS"])
 def lcd_clear():
-    lcd.clear()
+    if request.method == "OPTIONS":
+        return '', 204
+    with lcd_lock:
+        lcd.clear()
+        time.sleep(0.05)
     return jsonify(ok=True)
 
-@app.route("/lcd/on", methods=["POST"])
+@app.route("/lcd/on", methods=["POST", "OPTIONS"])
 def lcd_on():
-    lcd.on()
+    if request.method == "OPTIONS":
+        return '', 204
+    with lcd_lock:
+        lcd.on()
+        time.sleep(0.05)
     return jsonify(ok=True)
 
-@app.route("/lcd/off", methods=["POST"])
+@app.route("/lcd/off", methods=["POST", "OPTIONS"])
 def lcd_off():
+    if request.method == "OPTIONS":
+        return '', 204
+    with lcd_lock:
+        lcd.off()
+        time.sleep(0.05)
     lcd.off()
     return jsonify(ok=True)
 
