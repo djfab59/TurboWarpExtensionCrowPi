@@ -1,61 +1,91 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# ===============================
+# CrowPi Bridge installer
+# ===============================
+
 set -Eeuo pipefail
 trap 'echo "❌ Error on line $LINENO"; exit 1' ERR
 
-echo "== CrowPi Bridge installer starting =="
+echo "== CrowPi Bridge installer =="
 
+# ---------- Root check ----------
+if [ "$EUID" -ne 0 ]; then
+  echo "❌ Please run as root:"
+  echo "   sudo ./install.sh"
+  exit 1
+fi
+
+# ---------- Constants ----------
 SERVICE_NAME="crowpi-bridge"
 
 REAL_USER="${SUDO_USER:-$(whoami)}"
 REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6)"
 
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-SOCKET_FILE="/etc/systemd/system/${SERVICE_NAME}.socket"
+PROJECT_DIR="$(pwd)"
 CONFIG_FILE="${REAL_HOME}/.crowpi-bridge.yml"
 
-PROJECT_DIR="$(pwd)"
-PYTHON_BIN="$(command -v python3)"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+SOCKET_FILE="/etc/systemd/system/${SERVICE_NAME}.socket"
 
-echo "== CrowPi Hardware Bridge installer =="
+echo "✔ User        : ${REAL_USER}"
+echo "✔ Home        : ${REAL_HOME}"
+echo "✔ Project dir : ${PROJECT_DIR}"
 
-# Root check
-if [ "$EUID" -ne 0 ]; then
-  echo "❌ Please run as root: sudo ./install.sh"
-  exit 1
-fi
-
+# ---------- Sanity checks ----------
 if [ ! -f "${PROJECT_DIR}/run.py" ]; then
   echo "❌ run.py not found in ${PROJECT_DIR}"
   exit 1
 fi
 
-echo "🔍 Checking gunicorn..."
-
-if ! command -v gunicorn >/dev/null 2>&1; then
-  echo "⚠ Gunicorn not found. Installing python3-gunicorn..."
-  apt update
-  apt install -y python3-gunicorn
-else
-  echo "✔ Gunicorn already installed"
+if ! command -v systemctl >/dev/null 2>&1; then
+  echo "❌ systemd not available on this system"
+  exit 1
 fi
 
-GUNICORN_BIN="$(command -v gunicorn)"
-
-echo "✔ Project     : ${PROJECT_DIR}"
-echo "✔ User        : ${REAL_USER}"
+# ---------- Detect python ----------
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "❌ python3 not found"
+  exit 1
+fi
+PYTHON_BIN="$(command -v python3)"
 echo "✔ Python      : ${PYTHON_BIN}"
+
+# ---------- Detect gunicorn ----------
+echo "🔍 Detecting gunicorn..."
+
+if command -v gunicorn3 >/dev/null 2>&1; then
+  GUNICORN_BIN="$(command -v gunicorn3)"
+elif command -v gunicorn >/dev/null 2>&1; then
+  GUNICORN_BIN="$(command -v gunicorn)"
+elif [ -x "${PROJECT_DIR}/.venv/bin/gunicorn" ]; then
+  GUNICORN_BIN="${PROJECT_DIR}/.venv/bin/gunicorn"
+else
+  echo ""
+  echo "❌ Gunicorn CLI not found."
+  echo ""
+  echo "➡ On CrowPi OS, the recommended solution is a local venv:"
+  echo "   cd ${PROJECT_DIR}"
+  echo "   python3 -m venv .venv"
+  echo "   .venv/bin/pip install gunicorn"
+  echo ""
+  exit 1
+fi
+
 echo "✔ Gunicorn    : ${GUNICORN_BIN}"
 
-# Stop old units if present
+# ---------- Stop previous units ----------
+echo "🛑 Stopping existing units (if any)..."
 systemctl stop ${SERVICE_NAME}.service 2>/dev/null || true
 systemctl stop ${SERVICE_NAME}.socket 2>/dev/null || true
+systemctl disable ${SERVICE_NAME}.service 2>/dev/null || true
 
-# -------- SOCKET --------
-echo "➡ Writing socket unit..."
+# ---------- Write socket ----------
+echo "➡ Writing systemd socket..."
 
-cat << EOF > ${SOCKET_FILE}
+cat << EOF > "${SOCKET_FILE}"
 [Unit]
-Description=CrowPi Hardware Bridge Socket
+Description=CrowPi Bridge Socket
 
 [Socket]
 ListenStream=127.0.0.1:3232
@@ -65,10 +95,10 @@ ReusePort=true
 WantedBy=sockets.target
 EOF
 
-# -------- SERVICE --------
-echo "➡ Writing service unit..."
+# ---------- Write service ----------
+echo "➡ Writing systemd service..."
 
-cat << EOF > ${SERVICE_FILE}
+cat << EOF > "${SERVICE_FILE}"
 [Unit]
 Description=CrowPi TurboWarp Hardware Bridge
 After=network.target
@@ -79,23 +109,25 @@ WorkingDirectory=${PROJECT_DIR}
 ExecStart=${GUNICORN_BIN} --bind fd://3 run:app
 User=${REAL_USER}
 Restart=on-failure
-TimeoutStopSec=600
+TimeoutStopSec=10
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd
+# ---------- Reload systemd ----------
+echo "🔄 Reloading systemd..."
 systemctl daemon-reexec
 systemctl daemon-reload
 
-# Enable ONLY socket
+# ---------- Enable ONLY socket ----------
+echo "✅ Enabling socket (on-demand start only)"
 systemctl enable --now ${SERVICE_NAME}.socket
 
-# -------- CONFIG FILE --------
-echo "📝 Writing config file ${CONFIG_FILE}"
+# ---------- Write config file ----------
+echo "📝 Writing config file: ${CONFIG_FILE}"
 
-cat << EOF > ${CONFIG_FILE}
+cat << EOF > "${CONFIG_FILE}"
 service:
   name: ${SERVICE_NAME}
   socket: ${SERVICE_NAME}.socket
@@ -118,8 +150,11 @@ chmod 600 "${CONFIG_FILE}"
 
 echo ""
 echo "✅ INSTALL COMPLETE"
-echo "ℹ️ The service runs ON DEMAND via systemd socket activation"
-echo "ℹ️ It does NOT start at boot"
+echo ""
+echo "Behaviour:"
+echo " - The service does NOT start at boot"
+echo " - The socket is active"
+echo " - The service starts automatically on first HTTP request"
 echo ""
 echo "Useful commands:"
 echo "  systemctl status ${SERVICE_NAME}.socket"
