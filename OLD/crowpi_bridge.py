@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from flask import Flask, request, jsonify
-from crowpi_lcd import LCDModule
+from OLD.crowpi_lcd import LCDModule
 import time
 import threading
 
