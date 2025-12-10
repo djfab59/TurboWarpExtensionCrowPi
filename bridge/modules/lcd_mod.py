@@ -98,9 +98,8 @@ class LCD:
         if delay_ms < 1:
             delay_ms = 1
 
-        # Keep a copy of the current static content on both lines
-        base_line1 = self.line1
-        base_line2 = self.line2
+        # Start from a clean screen for more predictable behaviour
+        self.clear()
 
         width = self.lcd_cols
         padding = " " * width
@@ -109,15 +108,15 @@ class LCD:
         i = 0
         while not stop_event.is_set():
             window = display_text[i:i + width]
-            if line == 1:
-                text1 = window
-                text2 = base_line2[:width]
-            else:
-                text1 = base_line1[:width]
-                text2 = window
 
-            # Send both lines at once (single-argument display_string)
-            self.lcd.display_string(f"{text1}\n{text2}")
+            if line == 1:
+                self.line1 = window
+                self.line2 = ""
+            else:
+                self.line1 = ""
+                self.line2 = window
+
+            self._render()
             time.sleep(delay_ms / 1000.0)
 
             i += 1
