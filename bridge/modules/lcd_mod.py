@@ -24,15 +24,19 @@ class LCD:
 
         # Backlight
         self.mcp.set_mode(self.bl_pin, 'output')
-        self.on()
 
     # ---------- LCD basics ----------
 
     def on(self):
         self.mcp.output(self.bl_pin, 1)
+        # Désactive le curseur pour éviter l'underscore final
+        self.lcd.set_display(on=1, cursor=0)
+        time.sleep(0.02)
 
     def off(self):
+        self.lcd.clear_display()
         self.mcp.output(self.bl_pin, 0)
+        time.sleep(0.02)
 
     def clear(self):
         self.lcd.clear_display()
@@ -41,21 +45,25 @@ class LCD:
     # ---------- Writing helpers ----------
 
     def write(self, text):
-        self.clear()
+        self.on()
+        self.lcd.clear_display()
         self.lcd.display_string(text[:16])
         time.sleep(0.02)
 
     def write_line(self, line, text):
         if line not in (1, 2):
             return
-        self.lcd.display_string(text[:16])
+        self.on()
+        text = text[:16]
+        self.lcd.display_string(text, line)
         time.sleep(0.02)
 
     def write_both(self, line1, line2):
-        self.clear()
-        # La bibliothèque HD44780MCP semble accepter une seule chaîne
-        # (avec éventuellement un retour à la ligne pour la 2e ligne).
-        self.lcd.display_string(f"{line1[:16]}\n{line2[:16]}")
+        self.on()
+        self.lcd.clear_display()
+        time.sleep(0.02)
+        self.lcd.display_string(line1[:16], 1)
+        self.lcd.display_string(line2[:16], 2)
         time.sleep(0.02)
 
     # ---------- Horizontal scroll ----------
@@ -64,13 +72,18 @@ class LCD:
         if line not in (1, 2):
             return
 
-        width = self.lcd_cols
-        padding = " " * width
-        text = padding + text + padding
-        index = 0
+        self.on()
 
+        width = 16
+        padding = " " * width
+        display_text = padding + text + padding
+
+        i = 0
         while not stop_event.is_set():
-            window = text[index:index + width]
-            self.lcd.display_string(window)
-            time.sleep(delay_ms / 1000)
-            index = (index + 1) % (len(text) - width)
+            window = display_text[i:i + width]
+            self.lcd.display_string(window, line)
+            time.sleep(delay_ms / 1000.0)
+
+            i += 1
+            if i > len(display_text) - width:
+                i = 0
