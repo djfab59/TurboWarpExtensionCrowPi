@@ -1,5 +1,6 @@
 from flask import Flask
 from bridge.routes.lcd import lcd_bp
+from bridge.routes.dht11 import dht11_bp
 
 app = Flask(__name__)
 
@@ -12,3 +13,4 @@ def add_cors_headers(response):
 
 # Enregistrement des blueprints
 app.register_blueprint(lcd_bp)
+app.register_blueprint(dht11_bp)
