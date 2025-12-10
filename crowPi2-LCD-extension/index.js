@@ -6,6 +6,7 @@
             return {
                 id: 'crowpi3lcd',
                 name: 'CrowPi3 LCD',
+            
                 blocks: [
                     {
                         opcode: 'write',
@@ -15,6 +16,37 @@
                             TEXT: {
                                 type: Scratch.ArgumentType.STRING,
                                 defaultValue: 'Hello CrowPi3'
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'writeLine',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'afficher [TEXT] sur ligne [LINE]',
+                        arguments: {
+                            TEXT: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: 'Hello'
+                            },
+                            LINE: {
+                                type: Scratch.ArgumentType.NUMBER,
+                                defaultValue: 1,
+                                menu: 'lines'
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'writeBoth',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'ligne 1 [LINE1] | ligne 2 [LINE2]',
+                        arguments: {
+                            LINE1: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: 'Hello'
+                            },
+                            LINE2: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: 'World'
                             }
                         }
                     },
@@ -33,7 +65,13 @@
                         blockType: Scratch.BlockType.COMMAND,
                         text: 'éteindre le LCD'
                     }
-                ]
+                ],
+                menus: {
+                    lines: {
+                        acceptReporters: false,
+                        items: ['1', '2']
+                    }
+                }
             };
         }
 
@@ -41,6 +79,20 @@
             this._post('/lcd/write', { text: args.TEXT });
         }
 
+        writeLine(args) {
+            this._post('/lcd/line', {
+                line: Number(args.LINE),
+                text: args.TEXT
+            });
+        }
+
+        writeBoth(args) {
+            this._post('/lcd/both', {
+                line1: args.LINE1,
+                line2: args.LINE2
+            });
+        }
+        
         clear() {
             this._post('/lcd/clear', {});
         }
