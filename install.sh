@@ -14,7 +14,7 @@ SOCKET_FILE="/etc/systemd/system/${SERVICE_NAME}.socket"
 CONFIG_FILE="${REAL_HOME}/.crowpi-bridge.yml"
 
 PROJECT_DIR="$(pwd)"
-PYTHON_BIN="$(which python3)"
+PYTHON_BIN="$(command -v python3)"
 
 echo "== CrowPi Hardware Bridge installer =="
 
@@ -39,7 +39,7 @@ else
   echo "✔ Gunicorn already installed"
 fi
 
-GUNICORN_BIN="$(which gunicorn)"
+GUNICORN_BIN="$(command -v gunicorn)"
 
 echo "✔ Project     : ${PROJECT_DIR}"
 echo "✔ User        : ${REAL_USER}"
