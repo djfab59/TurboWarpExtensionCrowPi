@@ -1,6 +1,6 @@
 from flask import Flask
 from bridge.routes.lcd import lcd_bp
-from bridge.routes.dht11 import dht11_bp
+from bridge.routes.dht20 import dht11_bp
 
 app = Flask(__name__)
 

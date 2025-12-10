@@ -1,7 +1,7 @@
 (function (Scratch) {
     'use strict';
 
-    class CrowPiDHT11 {
+    class CrowPiDHT20 {
         constructor() {
             this._temperature = 0;
             this._humidity = 0;
@@ -9,13 +9,13 @@
 
         getInfo() {
             return {
-                id: 'crowpidht11',
-                name: 'CrowPi DHT11',
+                id: 'crowpidht20',
+                name: 'CrowPi DHT20',
                 blocks: [
                     {
                         opcode: 'update',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: 'mettre à jour DHT11'
+                        text: 'mettre à jour DHT20'
                     },
                     {
                         opcode: 'temperature',
@@ -32,7 +32,7 @@
         }
 
         update() {
-            return fetch('http://127.0.0.1:3232/dht11/read')
+            return fetch('http://127.0.0.1:3232/dht20/read')
                 .then(r => r.json())
                 .then(data => {
                     if (data.temperature !== null) {
@@ -51,6 +51,6 @@
         }
     }
 
-    Scratch.extensions.register(new CrowPiDHT11());
+    Scratch.extensions.register(new CrowPiDHT20());
 
 })(Scratch);

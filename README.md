@@ -36,7 +36,7 @@ Python Flask Bridge
     │
     ▼
 Modules matériels CrowPi
-(LCD, DHT11, Keypad, LED Matrix…)
+(LCD, DHT20, Keypad, LED Matrix…)
 ```
 
 🔒 Un seul processus accède au matériel  
@@ -146,7 +146,7 @@ when green flag clicked
 - ✅ LCD 16×2 (lignes, clear, scroll horizontal)
 - 🔜 Keypad 4×4
 - 🔜 Matrice LED 8×8
-- 🔜 DHT11 / DHT22
+- 🔜 DHT20
 - 🔜 Buzzer
 
 ---
@@ -192,7 +192,7 @@ Python Flask Bridge
     │
     ▼
 CrowPi Hardware Modules
-(LCD, DHT11, Keypad, LED Matrix…)
+(LCD, DHT20, Keypad, LED Matrix…)
 ```
 
 ---

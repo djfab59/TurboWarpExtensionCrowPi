@@ -1,2 +1,2 @@
 import './lcd.js'
-//import './dht11.js'
+import './dht20.js'
