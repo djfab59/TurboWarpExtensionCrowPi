@@ -1,5 +1,8 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
+trap 'echo "❌ Error on line $LINENO"; exit 1' ERR
+
+echo "== CrowPi Bridge uninstaller starting =="
 
 REAL_USER="${SUDO_USER:-$(whoami)}"
 REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6)"

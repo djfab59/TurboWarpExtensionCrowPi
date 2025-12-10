@@ -1,5 +1,8 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
+trap 'echo "❌ Error on line $LINENO"; exit 1' ERR
+
+echo "== CrowPi Bridge installer starting =="
 
 SERVICE_NAME="crowpi-bridge"
 
