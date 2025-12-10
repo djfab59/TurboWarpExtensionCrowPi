@@ -98,9 +98,6 @@ class LCD:
         if delay_ms < 1:
             delay_ms = 1
 
-        # Start from a clean screen for more predictable behaviour
-        self.clear()
-
         width = self.lcd_cols
         padding = " " * width
         display_text = padding + text + padding
@@ -109,14 +106,12 @@ class LCD:
         while not stop_event.is_set():
             window = display_text[i:i + width]
 
+            # Utilise les mêmes chemins que write_both, qui fonctionne déjà bien.
             if line == 1:
-                self.line1 = window
-                self.line2 = ""
+                self.write_both(window, "")
             else:
-                self.line1 = ""
-                self.line2 = window
+                self.write_both("", window)
 
-            self._render()
             time.sleep(delay_ms / 1000.0)
 
             i += 1
