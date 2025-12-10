@@ -25,6 +25,22 @@ class LCD:
         # Backlight
         self.mcp.set_mode(self.bl_pin, 'output')
 
+        # Internal state of both lines (for single-argument display_string)
+        self.line1 = ""
+        self.line2 = ""
+
+    # ---------- Internal helpers ----------
+
+    def _render(self):
+        """
+        Send current buffer (line1 + line2) to the LCD.
+        Uses a single display_string call compatible with the HD44780MCP API
+        that accepts only one positional argument.
+        """
+        text = f"{self.line1[:self.lcd_cols]}\n{self.line2[:self.lcd_cols]}"
+        self.lcd.display_string(text)
+        time.sleep(0.02)
+
     # ---------- LCD basics ----------
 
     def on(self):
@@ -39,6 +55,8 @@ class LCD:
         time.sleep(0.02)
 
     def clear(self):
+        self.line1 = ""
+        self.line2 = ""
         self.lcd.clear_display()
         time.sleep(0.02)
 
@@ -46,25 +64,27 @@ class LCD:
 
     def write(self, text):
         self.on()
+        self.line1 = text[:self.lcd_cols]
+        self.line2 = ""
         self.lcd.clear_display()
-        self.lcd.display_string(text[:16])
-        time.sleep(0.02)
+        self._render()
 
     def write_line(self, line, text):
         if line not in (1, 2):
             return
         self.on()
-        text = text[:16]
-        self.lcd.display_string(text, line)
-        time.sleep(0.02)
+        if line == 1:
+            self.line1 = text[:self.lcd_cols]
+        else:
+            self.line2 = text[:self.lcd_cols]
+        self._render()
 
     def write_both(self, line1, line2):
         self.on()
+        self.line1 = line1[:self.lcd_cols]
+        self.line2 = line2[:self.lcd_cols]
         self.lcd.clear_display()
-        time.sleep(0.02)
-        self.lcd.display_string(line1[:16], 1)
-        self.lcd.display_string(line2[:16], 2)
-        time.sleep(0.02)
+        self._render()
 
     # ---------- Horizontal scroll ----------
 
@@ -74,14 +94,19 @@ class LCD:
 
         self.on()
 
-        width = 16
+        width = self.lcd_cols
         padding = " " * width
         display_text = padding + text + padding
 
         i = 0
         while not stop_event.is_set():
             window = display_text[i:i + width]
-            self.lcd.display_string(window, line)
+            if line == 1:
+                self.line1 = window
+            else:
+                self.line2 = window
+
+            self._render()
             time.sleep(delay_ms / 1000.0)
 
             i += 1
