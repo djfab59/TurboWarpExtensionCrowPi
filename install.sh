@@ -15,7 +15,6 @@ CONFIG_FILE="${REAL_HOME}/.crowpi-bridge.yml"
 
 PROJECT_DIR="$(pwd)"
 PYTHON_BIN="$(which python3)"
-GUNICORN_BIN="$(which gunicorn)"
 
 echo "== CrowPi Hardware Bridge installer =="
 
