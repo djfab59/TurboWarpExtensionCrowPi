@@ -1,56 +1,42 @@
-(function (Scratch) {
-    'use strict';
+class DHTModule {
+  getBlocks () {
+    return [
+      {
+        opcode: 'dhtTemp',
+        blockType: Scratch.BlockType.REPORTER,
+        text: 'température (°C)'
+      },
+      {
+        opcode: 'dhtHum',
+        blockType: Scratch.BlockType.REPORTER,
+        text: 'humidité (%)'
+      }
+    ];
+  }
 
-    class CrowPiDHT20 {
-        constructor() {
-            this._temperature = 0;
-            this._humidity = 0;
-        }
+  getMenus () {
+    return {};
+  }
 
-        getInfo() {
-            return {
-                id: 'crowpidht20',
-                name: 'CrowPi DHT20',
-                blocks: [
-                    {
-                        opcode: 'update',
-                        blockType: Scratch.BlockType.COMMAND,
-                        text: 'mettre à jour DHT20'
-                    },
-                    {
-                        opcode: 'temperature',
-                        blockType: Scratch.BlockType.REPORTER,
-                        text: 'température (°C)'
-                    },
-                    {
-                        opcode: 'humidity',
-                        blockType: Scratch.BlockType.REPORTER,
-                        text: 'humidité (%)'
-                    }
-                ]
-            };
-        }
-
-        update() {
-            return fetch('http://127.0.0.1:3232/dht20/read')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.temperature !== null) {
-                        this._temperature = data.temperature;
-                        this._humidity = data.humidity;
-                    }
-                });
-        }
-
-        temperature() {
-            return this._temperature;
-        }
-
-        humidity() {
-            return this._humidity;
-        }
+  async dhtTemp () {
+    try {
+      const res = await fetch('http://127.0.0.1:3232/dht20/read');
+      const data = await res.json();
+      return (data && typeof data.temperature === 'number') ? data.temperature : 0;
+    } catch (e) {
+      return 0;
     }
+  }
 
-    Scratch.extensions.register(new CrowPiDHT20());
+  async dhtHum () {
+    try {
+      const res = await fetch('http://127.0.0.1:3232/dht20/read');
+      const data = await res.json();
+      return (data && typeof data.humidity === 'number') ? data.humidity : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+}
 
-})(Scratch);
+module.exports = DHTModule;
