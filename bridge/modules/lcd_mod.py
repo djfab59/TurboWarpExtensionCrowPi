@@ -42,19 +42,20 @@ class LCD:
 
     def write(self, text):
         self.clear()
-        self.lcd.display_string(text[:16], 1)
+        self.lcd.display_string(text[:16])
         time.sleep(0.02)
 
     def write_line(self, line, text):
         if line not in (1, 2):
             return
-        self.lcd.display_string(text[:16], line)
+        self.lcd.display_string(text[:16])
         time.sleep(0.02)
 
     def write_both(self, line1, line2):
         self.clear()
-        self.lcd.display_string(line1[:16], 1)
-        self.lcd.display_string(line2[:16], 2)
+        # La bibliothèque HD44780MCP semble accepter une seule chaîne
+        # (avec éventuellement un retour à la ligne pour la 2e ligne).
+        self.lcd.display_string(f"{line1[:16]}\n{line2[:16]}")
         time.sleep(0.02)
 
     # ---------- Horizontal scroll ----------
@@ -70,6 +71,6 @@ class LCD:
 
         while not stop_event.is_set():
             window = text[index:index + width]
-            self.lcd.display_string(window, line)
+            self.lcd.display_string(window)
             time.sleep(delay_ms / 1000)
             index = (index + 1) % (len(text) - width)
