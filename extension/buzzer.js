@@ -58,7 +58,22 @@
         menus: {
           melodies: {
             acceptReporters: false,
-            items: ['marion', 'alerte', 'victoire', 'echec', 'mario_tuyau', 'mario_victoire', 'mario_mort']
+            items: [
+              'marion',
+              'alerte',
+              'victoire',
+              'echec',
+              'mario_tuyau',
+              'mario_victoire',
+              'mario_mort',
+              'mario_start_level',
+              'mario_coin',
+              'mario_1up',
+              'mario_powerup',
+              'mario_game_over',
+              'mario_star',
+              'mario_bowser'
+            ]
           },
           notes: {
             acceptReporters: false,
