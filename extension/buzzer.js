@@ -33,7 +33,8 @@
             arguments: {
               NOTE: {
                 type: Scratch.ArgumentType.STRING,
-                defaultValue: 'C4'
+                defaultValue: 'C4',
+                menu: 'notes'
               },
               DUR: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -57,7 +58,15 @@
         menus: {
           melodies: {
             acceptReporters: false,
-            items: ['marion', 'alerte', 'victoire', 'echec']
+            items: ['marion', 'alerte', 'victoire', 'echec', 'mario_tuyau', 'mario_victoire', 'mario_mort']
+          },
+          notes: {
+            acceptReporters: false,
+            items: [
+              'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4',
+              'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5',
+              'C6', 'D6', 'E6', 'F6', 'G6', 'A6', 'B6'
+            ]
           }
         }
       };
@@ -96,4 +105,3 @@
 
   Scratch.extensions.register(new CrowPiBuzzer());
 })(Scratch);
-
