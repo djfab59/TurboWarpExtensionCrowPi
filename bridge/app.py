@@ -7,6 +7,7 @@ from bridge.routes.ledmatrix import ledmatrix_bp
 from bridge.routes.vibration import vibration_bp
 from bridge.routes.relay import relay_bp
 from bridge.routes.segment import segment_bp
+from bridge.routes.ultrasonicsensor import ultrasonicsensor_bp
 
 app = Flask(__name__)
 
@@ -28,3 +29,4 @@ app.register_blueprint(ledmatrix_bp)
 app.register_blueprint(vibration_bp)
 app.register_blueprint(relay_bp)
 app.register_blueprint(segment_bp)
+app.register_blueprint(ultrasonicsensor_bp)
