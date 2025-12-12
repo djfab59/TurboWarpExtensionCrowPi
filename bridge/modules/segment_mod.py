@@ -96,7 +96,13 @@ class SegmentDisplay:
 
     def set_decimal_point(self, position: int, on: bool) -> None:
         """
-        Active ou désactive le point du digit (1–4).
+        Active ou désactive le point du digit logique (1–4).
+        Attention : sur le module du CrowPi, seuls certains points
+        existent physiquement. D'après les tests :
+        - un point existe côté gauche
+        - un point existe côté droit
+        - le deux-points ':' est indépendant
+        Il n'y a pas de vrai point pour tous les digits.
         """
         self._ensure_init()
         try:
@@ -107,18 +113,24 @@ class SegmentDisplay:
         if not (1 <= pos <= 4):
             return
 
-        # Sur le CrowPi, la librairie SevenSegment fournie a été modifiée
-        # pour que les digits soient contigus (offset=0). On manipule donc
-        # directement le buffer pour positionner le bit "decimal" (bit 7)
-        # du digit ciblé (0–3).
-        index = pos - 1
-        buf_index = index * 2
-
-        if on:
-            self._segment.buffer[buf_index] |= 0x80
+        # Mapping logique -> matériel basé sur ton test:
+        # - point gauche disponible
+        # - colon ':' indépendant
+        # - point droit disponible
+        # On choisit :
+        #   1 -> point gauche
+        #   2 -> (optionnel) on n'utilise pas le ':' ici, il reste dédié à set_colon()
+        #   3 -> point droit
+        #   4 -> non câblé, ignoré
+        if pos == 1:
+            hw_pos = 0
+        elif pos == 3:
+            hw_pos = 2
         else:
-            self._segment.buffer[buf_index] &= 0x7F
+            # 2 et 4 : pas de point décimal dédié
+            return
 
+        self._segment.set_decimal(hw_pos, bool(on))
         self._segment.write_display()
 
     def set_colon(self, on: bool) -> None:
