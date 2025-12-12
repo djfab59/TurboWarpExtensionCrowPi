@@ -1,4 +1,14 @@
 from typing import Optional
+import sys
+from pathlib import Path
+
+# On force l'utilisation de la version modifiée de la lib
+# Adafruit_LED_Backpack fournie avec les projets CrowPi,
+# qui est adaptée au câblage spécifique du 7-segments.
+_repo_root = Path(__file__).resolve().parents[2]
+_adafruit_path = _repo_root / "OLD" / "project" / "Happy_birthday"
+if str(_adafruit_path) not in sys.path:
+    sys.path.insert(0, str(_adafruit_path))
 
 from Adafruit_LED_Backpack import SevenSegment
 
@@ -149,4 +159,3 @@ class SegmentDisplay:
 
 
 segment_display = SegmentDisplay()
-
