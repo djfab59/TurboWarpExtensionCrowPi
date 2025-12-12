@@ -31,7 +31,7 @@ segment.write_display()
 input("-> Regarde où s'allume le ':', puis Entrée...")
 
 print("\nTest brut des points avec set_digit_raw (bit 0x80)")
-for pos in range(4):
+for pos in range(9):
     segment.clear()
     # 0x80 = bit du point décimal sur ce digit
     segment.set_digit_raw(pos, 0x80)
