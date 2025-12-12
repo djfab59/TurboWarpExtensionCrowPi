@@ -2,11 +2,11 @@
   'use strict';
 
   class CrowPiButtonMatrix {
-    constructor (runtime) {
-      this.runtime = runtime;
+    constructor () {
       this.lastRaw = -1;
       this.lastMapped = -1;
       this.lastState = null;
+      this._pendingEvents = [];
       // Mode debug activable via ?debug=1 dans l'URL
       this.debug = typeof window !== 'undefined' &&
         window.location &&
@@ -99,17 +99,10 @@
             ) {
               this.lastMapped = mapped;
               this.lastState = state;
-
-              // Déclenchement des blocs chapeau selon l'état
-              if (state === 'down') {
-                this.runtime.startHats('crowpibuttonmatrix_whenKeyPressed', {
-                  KEY: String(mapped)
-                });
-              } else if (state === 'up') {
-                this.runtime.startHats('crowpibuttonmatrix_whenKeyReleased', {
-                  KEY: String(mapped)
-                });
-              }
+              this._pendingEvents.push({
+                mapped: mapped,
+                state: state
+              });
             }
           } catch (e) {
             // ignore parsing errors
@@ -129,15 +122,29 @@
       }
     }
 
+    _consumeEvent (args, desiredState) {
+      const target = String(args.KEY || '');
+      if (!target) {
+        return false;
+      }
+
+      for (let i = 0; i < this._pendingEvents.length; i++) {
+        const ev = this._pendingEvents[i];
+        if (String(ev.mapped) === target && ev.state === desiredState) {
+          // Consomme l'événement pour ne pas le rejouer
+          this._pendingEvents.splice(i, 1);
+          return true;
+        }
+      }
+      return false;
+    }
+
     whenKeyPressed (args) {
-      // TurboWarp gère le filtrage via startHats() et l'argument KEY.
-      // Ce bloc ne fait qu'autoriser le déclenchement de l'événement.
-      return true;
+      return this._consumeEvent(args, 'down');
     }
 
     whenKeyReleased (args) {
-      // Idem pour la relâche : le filtrage se fait côté moteur Scratch.
-      return true;
+      return this._consumeEvent(args, 'up');
     }
 
     lastKey () {
@@ -149,5 +156,5 @@
     }
   }
 
-  Scratch.extensions.register(new CrowPiButtonMatrix(Scratch.vm.runtime));
+  Scratch.extensions.register(new CrowPiButtonMatrix());
 })(Scratch);
