@@ -99,7 +99,6 @@ class SegmentDisplay:
         Active ou désactive le point du digit (1–4).
         """
         self._ensure_init()
-
         try:
             pos = int(position)
         except (TypeError, ValueError):
@@ -108,8 +107,18 @@ class SegmentDisplay:
         if not (1 <= pos <= 4):
             return
 
+        # Sur le CrowPi, la librairie SevenSegment fournie a été modifiée
+        # pour que les digits soient contigus (offset=0). On manipule donc
+        # directement le buffer pour positionner le bit "decimal" (bit 7)
+        # du digit ciblé (0–3).
         index = pos - 1
-        self._segment.set_decimal(index, bool(on))
+        buf_index = index * 2
+
+        if on:
+            self._segment.buffer[buf_index] |= 0x80
+        else:
+            self._segment.buffer[buf_index] &= 0x7F
+
         self._segment.write_display()
 
     def set_colon(self, on: bool) -> None:
