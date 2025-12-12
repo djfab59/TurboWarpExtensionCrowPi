@@ -33,18 +33,19 @@ class LightSensor:
         Lecture de la luminosité en lux.
         Utilise un petit cache pour éviter de sur-solliciter le bus I2C.
         """
-        now = time.time()
-
-        # Cache ~0.2 s
-        if now - self._last_read < 0.2:
-            return self._last_lux
-
         try:
+            now = time.time()
+
+            # Cache ~0.2 s
+            if now - self._last_read < 0.2:
+                return self._last_lux
+
             bus = smbus2.SMBus(self.bus_id)
-            # Lecture en mode "one time high res"
+            # Lecture en mode "one time high res" (2 octets comme dans le script d'origine)
             data = bus.read_i2c_block_data(
                 self.address,
-                self.ONE_TIME_HIGH_RES_MODE_1
+                self.ONE_TIME_HIGH_RES_MODE_1,
+                2
             )
             lux = self._convert_to_number(data)
 
@@ -58,4 +59,3 @@ class LightSensor:
 
 
 lightsensor = LightSensor()
-
