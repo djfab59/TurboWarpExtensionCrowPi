@@ -76,6 +76,7 @@ class Buzzer:
     def _run_melody(self, sequence):
         """Boucle interne exécutée dans un thread pour jouer une mélodie."""
         for item in sequence:
+            # Vérifie au début de chaque étape si un arrêt a été demandé.
             if self._melody_stop.is_set():
                 break
 
@@ -89,6 +90,11 @@ class Buzzer:
                 self._stop_buzzer()
                 time.sleep(max(0, int(duration_ms)) / 1000.0)
                 continue
+
+            # Nouvelle vérification juste avant de (re)jouer un son afin
+            # d'éviter de rallumer le buzzer après un OFF.
+            if self._melody_stop.is_set():
+                break
 
             tone = self._to_tone(note)
             if tone is None:
@@ -105,8 +111,8 @@ class Buzzer:
         Lance la lecture d'une mélodie par son nom.
         La lecture se fait dans un thread dédié pour ne pas bloquer Flask.
         """
+        # Arrête proprement toute mélodie en cours
         self.stop_melody()
-
         sequence = MELODIES.get(name)
         if not sequence:
             return
@@ -124,9 +130,10 @@ class Buzzer:
         self._melody_stop.set()
         thread = self._melody_thread
         if thread is not None and thread.is_alive():
-            thread.join(timeout=0.1)
+            # Laisse au thread un peu plus de temps pour s'arrêter
+            # et ne pas rallumer le buzzer juste après un OFF.
+            thread.join(timeout=1.0)
         self._melody_thread = None
-        self._melody_stop.clear()
 
 
 buzzer = Buzzer()
