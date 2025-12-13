@@ -11,7 +11,9 @@ from bridge.modules.melodies import MELODIES
 class Buzzer:
     def __init__(self, pin: int = 18):
         self.pin = pin
-        self._buzzer = TonalBuzzer(self.pin)
+        # TonalBuzzer sera créé à la demande pour éviter les
+        # artefacts sonores persistants. On le recrée après chaque OFF.
+        self._buzzer: Optional[TonalBuzzer] = None
         self._melody_thread: Optional[threading.Thread] = None
         self._melody_stop = threading.Event()
 
@@ -37,8 +39,31 @@ class Buzzer:
             except Exception:
                 return None
 
+    def _ensure_buzzer(self) -> TonalBuzzer:
+        """
+        Crée l'instance TonalBuzzer au besoin.
+        On évite de garder un PWM vivant trop longtemps.
+        """
+        if self._buzzer is None:
+            self._buzzer = TonalBuzzer(self.pin)
+        return self._buzzer
+
     def _stop_buzzer(self):
-        self._buzzer.stop()
+        """
+        Arrête complètement le buzzer et libère les ressources PWM.
+        Cela permet d'éviter le sifflement résiduel observé après OFF.
+        """
+        buz = self._buzzer
+        if buz is not None:
+            try:
+                buz.stop()
+            except Exception:
+                pass
+            try:
+                buz.close()
+            except Exception:
+                pass
+        self._buzzer = None
 
     # ---------- API simple ----------
 
@@ -49,7 +74,8 @@ class Buzzer:
         tone = self._to_tone(freq_hz)
         if tone is None:
             return
-        self._buzzer.play(tone)
+        buz = self._ensure_buzzer()
+        buz.play(tone)
 
     def off(self) -> None:
         """Éteint le buzzer (et arrête toute mélodie)."""
@@ -67,7 +93,8 @@ class Buzzer:
         if tone is None:
             return
 
-        self._buzzer.play(tone)
+        buz = self._ensure_buzzer()
+        buz.play(tone)
         time.sleep(max(0, duration_ms) / 1000.0)
         self._stop_buzzer()
 
@@ -100,7 +127,8 @@ class Buzzer:
             if tone is None:
                 continue
 
-            self._buzzer.play(tone)
+            buz = self._ensure_buzzer()
+            buz.play(tone)
             time.sleep(max(0, int(duration_ms)) / 1000.0)
 
         # Fin de mélodie
