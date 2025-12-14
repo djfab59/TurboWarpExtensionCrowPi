@@ -147,7 +147,7 @@ EMOJIS: _t.Dict[str, _t.List[_t.Dict[str, _t.Any]]] = {
         },
     ],
     # Smiley carré "Ho"
-    "smiley_square_Ho": [
+    "smiley_square_ho": [
         {
             "pixels_by_color": [
                 {
@@ -202,6 +202,64 @@ EMOJIS: _t.Dict[str, _t.List[_t.Dict[str, _t.Any]]] = {
                     "color": (255, 75, 255),
                     "indices": [
                         60, 61,
+                    ],
+                },
+            ]
+        },
+    ],
+    # Smiley carré "lol"
+    "smiley_square_lol": [
+        {
+            "pixels_by_color": [
+                {
+                    "color": (255, 255, 0),
+                    "indices": [
+                        0,  1,  2,  3,  4,  5,  6,  7,
+                        8,  9,  10, 11, 12, 13, 14, 15,
+                        16,         19, 20,         23,
+                            25, 24, 27, 28, 29, 30,
+                        32, 33, 34, 35, 36, 37, 38, 39,
+                        40,                         47,
+                        48, 49,                 54, 55,
+                        56, 57, 58, 59, 60, 61, 62, 63,
+                    ],
+                },
+                {
+                    "color": (0, 0, 255),
+                    "indices": [
+                        24, 31,
+                    ],
+                },
+                {
+                    "color": (255, 255, 255),
+                    "indices": [
+                        50, 51, 52, 53,
+                    ],
+                },
+            ]
+        },
+    ],
+    # Smiley carré qui pleure
+    "smiley_square_cry": [
+        {
+            "pixels_by_color": [
+                {
+                    "color": (255, 255, 0),
+                    "indices": [
+                        0,  1,  2,  3,  4,  5,  6,  7,
+                        8,  9,  10, 11, 12, 13, 14, 15,
+                        16,         19, 20,         23,
+                        24,     24, 27, 28, 29,     31,
+                        32,     34, 35, 36, 37,     39,
+                        40,     42,         45,     47,
+                        48, 49, 50,         53, 54, 55,
+                        56, 57, 58, 59, 60, 61, 62, 63,
+                    ],
+                },
+                {
+                    "color": (0, 0, 255),
+                    "indices": [
+                        25, 33, 41, 30, 38, 46,
                     ],
                 },
             ]
@@ -265,4 +323,3 @@ EMOJIS: _t.Dict[str, _t.List[_t.Dict[str, _t.Any]]] = {
     #         ]
     #     },
     # ],
-

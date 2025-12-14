@@ -121,7 +121,7 @@
           },
           emojis: {
             acceptReporters: false,
-            items: ['smiley', 'smiley_langue', 'smiley_square', 'smiley_square_sad', 'smiley_square_love', 'smiley_square_Ho', 'smiley_square_crazy', 'sad', 'heart', 'blink']
+            items: ['smiley', 'smiley_langue', 'smiley_square', 'smiley_square_sad', 'smiley_square_love', 'smiley_square_ho', 'smiley_square_crazy', 'smiley_square_lol', 'smiley_square_cry', 'sad', 'heart', 'blink']
           }
         }
       };
