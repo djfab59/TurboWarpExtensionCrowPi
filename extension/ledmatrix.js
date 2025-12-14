@@ -103,6 +103,22 @@
           }
         ],
         menus: {
+          colors: {
+            acceptReporters: false,
+            items: [
+              'rouge',
+              'vert',
+              'bleu',
+              'blanc',
+              'jaune',
+              'cyan',
+              'magenta',
+              'rose',
+              'orange',
+              'violet',
+              'noir'
+            ]
+          },
           emojis: {
             acceptReporters: false,
             items: ['smiley', 'sad', 'heart', 'blink']
