@@ -105,9 +105,6 @@ EMOJIS: _t.Dict[str, _t.List[_t.Dict[str, _t.Any]]] = {
             ]
         },
         {
-            "pixels": []
-        },
-        {
             "pixels": [
                 {"index": i, "color": ((i * 80) % 256, (i * 40) % 256, (i * 160) % 256)}
                 for i in range(64)

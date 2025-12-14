@@ -31,23 +31,17 @@ class Relay:
             )
         return self._device
 
-    def on(self) -> None:
-        """Active le relais."""
+    def off(self) -> None:
         dev = self._ensure_device()
         if dev is not None:
             dev.on()
 
-    def off(self) -> None:
-        """Désactive le relais."""
+    def on(self) -> None:
         dev = self._ensure_device()
         if dev is not None:
             dev.off()
 
     def pulse(self, duration_ms: int) -> None:
-        """
-        Active le relais pendant une durée (ms), puis le désactive.
-        Bloquant, mais la durée est généralement courte.
-        """
         if self._device is None:
             self._ensure_device()
         if self._device is None:
@@ -61,9 +55,9 @@ class Relay:
         if duration <= 0:
             return
 
-        self._device.on()
-        time.sleep(duration / 1000.0)
         self._device.off()
+        time.sleep(duration / 1000.0)
+        self._device.on()
 
 
 relay = Relay()
