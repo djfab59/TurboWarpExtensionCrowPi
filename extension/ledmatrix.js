@@ -121,7 +121,7 @@
           },
           emojis: {
             acceptReporters: false,
-            items: ['smiley', 'sad', 'heart', 'blink']
+            items: ['smiley', 'smiley_langue', 'sad', 'heart', 'blink']
           }
         }
       };
