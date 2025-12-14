@@ -14,13 +14,20 @@ EMOJIS: _t.Dict[str, _t.List[_t.Dict[str, _t.Any]]] = {
     # Smiley multi‑couleur : yeux verts, bouche jaune
     "smiley": [
         {
-            "pixels": [
-                {"index": 10, "color": (0, 255, 0)},   # œil gauche vert
-                {"index": 13, "color": (0, 255, 0)},   # œil droit vert
-                {"index": 34, "color": (255, 255, 0)}, # bouche jaune
-                {"index": 35, "color": (255, 255, 0)},
-                {"index": 36, "color": (255, 255, 0)},
-                {"index": 37, "color": (255, 255, 0)},
+            "pixels_by_color": [
+                {
+                    "color": (255, 255, 0),
+                    "indices": [
+                        2, 3, 4, 5,
+                        9, 10, 11, 12, 13, 14,
+                        16, 17, 19, 20, 22, 23,
+                        24, 25, 27, 28, 30, 31, 
+                        32, 33, 34, 35, 36, 37, 38, 39, 
+                        40, 41, 43, 44, 46, 47, 
+                        49, 50, 53, 54,
+                        58, 59, 60, 61,
+                    ],
+                }
             ]
         },
     ],
