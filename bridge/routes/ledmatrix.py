@@ -81,16 +81,15 @@ def fill_color():
     return jsonify(ok=True)
 
 
-@ledmatrix_bp.route("/animation", methods=["POST", "OPTIONS"])
-def animation():
+@ledmatrix_bp.route("/emoji", methods=["POST", "OPTIONS"])
+def emoji():
     if request.method == "OPTIONS":
         return "", 204
 
     data = request.get_json(silent=True) or {}
     name = data.get("name", "")
-    color = data.get("color")
 
     with ledmatrix_lock:
-        ledmatrix.play_animation(name, color_name=color)
+        ledmatrix.play_animation(name, color_name=None)
 
     return jsonify(ok=True)

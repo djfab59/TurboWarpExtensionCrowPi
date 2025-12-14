@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple, Optional
 
 from elecrow_ws281x import PixelStrip, Color
 
-from bridge.modules.animations import ANIMATIONS
+from bridge.modules.emojis import EMOJIS
 
 
 class LedMatrix:
@@ -120,48 +120,91 @@ class LedMatrix:
         self.strip.fill(r, g, b)
         self.strip.show()
 
-    # ---------- Animations ----------
+    # ---------- Emojis / animations ----------
 
     def _run_animation(
         self,
         frames: List[Dict[str, object]],
         override_rgb: Optional[Tuple[int, int, int]] = None
     ) -> None:
+        # Délai fixe entre frames (en secondes). Pour un emoji statique
+        # (une seule frame), cette valeur n'a pas d'impact visible.
+        frame_delay = 0.2
+
         for frame in frames:
             if self._anim_stop.is_set():
                 break
 
             pixels = frame.get("pixels", [])
-            color = frame.get("color", (255, 255, 255))
-            duration = int(frame.get("duration", 200))
 
-            if override_rgb is not None:
-                r, g, b = override_rgb
-            else:
-                try:
-                    r, g, b = color
-                except Exception:
-                    r, g, b = 255, 255, 255
-
-            # Efface tout
+            # Efface tout à chaque frame
             self.strip.fill(0, 0, 0)
 
-            # Allume uniquement les pixels de la frame
-            for idx in pixels:
-                try:
-                    idx = int(idx)
-                except (TypeError, ValueError):
-                    continue
-                self._set_pixel(idx, r, g, b)
+            # Priorité au format groupé par couleur si présent
+            pixels_by_color = frame.get("pixels_by_color")
+
+            if pixels_by_color:
+                # Format : [{"color": (r,g,b), "indices": [..]}, ...]
+                for group in pixels_by_color:
+                    color = group.get("color", (255, 255, 255))
+                    indices = group.get("indices", [])
+                    try:
+                        r, g, b = color
+                    except Exception:
+                        r, g, b = 255, 255, 255
+
+                    for idx in indices:
+                        try:
+                            idx = int(idx)
+                        except (TypeError, ValueError):
+                            continue
+                        self._set_pixel(idx, r, g, b)
+
+            elif pixels and isinstance(pixels[0], dict):
+                # Mode multi‑couleur : chaque pixel peut avoir sa couleur
+                for item in pixels:
+                    try:
+                        idx = int(item.get("index", -1))
+                    except (TypeError, ValueError):
+                        continue
+
+                    color = item.get("color", (255, 255, 255))
+                    try:
+                        r, g, b = color
+                    except Exception:
+                        r, g, b = 255, 255, 255
+
+                    self._set_pixel(idx, r, g, b)
+            else:
+                # Mode simple : une seule couleur pour tous les pixels de la frame,
+                # éventuellement surchargée par override_rgb.
+                color = frame.get("color", (255, 255, 255))
+                if override_rgb is not None:
+                    r, g, b = override_rgb
+                else:
+                    try:
+                        r, g, b = color
+                    except Exception:
+                        r, g, b = 255, 255, 255
+
+                for idx in pixels:
+                    try:
+                        idx = int(idx)
+                    except (TypeError, ValueError):
+                        continue
+                    self._set_pixel(idx, r, g, b)
 
             self.strip.show()
-            time.sleep(max(0, duration) / 1000.0)
+
+            # Petite pause entre frames pour les emojis à plusieurs
+            # images (clignotement, etc.).
+            time.sleep(frame_delay)
 
     def play_animation(self, name: str, color_name: Optional[str] = None) -> None:
         """Lance une animation par son nom, avec couleur optionnelle, dans un thread dédié."""
         self.stop_animation()
 
-        frames = ANIMATIONS.get(str(name).lower())
+        frames = EMOJIS.get(str(name).lower())
         if not frames:
             return
 

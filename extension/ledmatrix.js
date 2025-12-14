@@ -90,41 +90,20 @@
             }
           },
           {
-            opcode: 'playAnimation',
+            opcode: 'playEmoji',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'jouer animation [ANIM] couleur [COLOR]',
+            text: 'jouer emoji [EMOJI]',
             arguments: {
-              ANIM: {
+              EMOJI: {
                 type: Scratch.ArgumentType.STRING,
                 defaultValue: 'smiley',
-                menu: 'anims'
-              },
-              COLOR: {
-                type: Scratch.ArgumentType.STRING,
-                defaultValue: 'blanc',
-                menu: 'colors'
+                menu: 'emojis'
               }
             }
           }
         ],
         menus: {
-          colors: {
-            acceptReporters: false,
-            items: [
-              'rouge',
-              'vert',
-              'bleu',
-              'blanc',
-              'jaune',
-              'cyan',
-              'magenta',
-              'rose',
-              'orange',
-              'violet',
-              'noir'
-            ]
-          },
-          anims: {
+          emojis: {
             acceptReporters: false,
             items: ['smiley', 'sad', 'heart', 'blink']
           }
@@ -167,10 +146,9 @@
       });
     }
 
-    playAnimation (args) {
-      this._post('/ledmatrix/animation', {
-        name: args.ANIM,
-        color: args.COLOR
+    playEmoji (args) {
+      this._post('/ledmatrix/emoji', {
+        name: args.EMOJI
       });
     }
 
