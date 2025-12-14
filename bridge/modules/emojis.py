@@ -24,16 +24,23 @@ EMOJIS: _t.Dict[str, _t.List[_t.Dict[str, _t.Any]]] = {
             ]
         },
     ],
-    # Smiley triste multi‑couleur : yeux bleus, bouche rouge
+    # Smiley triste multi‑couleur
     "sad": [
         {
-            "pixels": [
-                {"index": 10, "color": (0, 0, 255)},   # yeux bleus
-                {"index": 13, "color": (0, 0, 255)},
-                {"index": 26, "color": (255, 0, 0)},   # bouche rouge inversée
-                {"index": 27, "color": (255, 0, 0)},
-                {"index": 28, "color": (255, 0, 0)},
-                {"index": 29, "color": (255, 0, 0)},
+            "pixels_by_color": [
+                {
+                    "color": (255, 255, 0),
+                    "indices": [
+                        2, 3, 4, 5,
+                        9, 10, 11, 12, 13, 14,
+                        16, 17, 19, 20, 22, 23,
+                        24, 25, 27, 28, 30, 31, 
+                        32, 33, 34, 35, 36, 37, 38, 39, 
+                        40, 41, 42, 45, 46, 47, 
+                        49, 51, 52, 54,
+                        58, 59, 60, 61,
+                    ],
+                }
             ]
         },
     ],
@@ -77,3 +84,24 @@ EMOJIS: _t.Dict[str, _t.List[_t.Dict[str, _t.Any]]] = {
         },
     ],
 }
+
+    # # Smiley triste multi‑couleur
+    # "sad": [
+    #     {
+    #         "pixels_by_color": [
+    #             {
+    #                 "color": (255, 255, 0),
+    #                 "indices": [
+    #                     0, 1, 2, 3, 4, 5, 6, 7,
+    #                     8, 9, 10, 11, 12, 13, 14, 15,
+    #                     16, 17, 18, 19, 20, 21, 22, 23,
+    #                     24, 25, 26, 27, 28, 29, 30, 31, 
+    #                     32, 33, 34, 35, 36, 37, 38, 39, 
+    #                     40, 41, 42, 43, 44, 45, 46, 47, 
+    #                     48, 49, 50, 51, 52, 53, 54, 55, 
+    #                     56, 57, 58, 59, 60, 61, 62, 63
+    #                 ],
+    #             }
+    #         ]
+    #     },
+    # ],
