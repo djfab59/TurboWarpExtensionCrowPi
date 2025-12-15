@@ -13,12 +13,12 @@ class NFCSensor:
 
     On fournit une API simple orientée présence de carte :
     - step() retourne (present, uid, event) où :
-        present : booléen (carte détectée ou non)
+        present : booléen (carte détectée ou non, état "stabilisé")
         uid     : chaîne UID "xx:xx:xx:xx" ou "" si aucune carte
         event   : "insert", "remove" ou None
     """
 
-    def __init__(self):
+    def __init__(self, consecutive_required=5):
         if SimpleMFRC522 is not None:
             try:
                 self.reader = SimpleMFRC522()
@@ -31,8 +31,18 @@ class NFCSensor:
             self.reader = None
             self._mfrc = None
 
-        self._last_present = None
+        # Nombre de lectures consécutives nécessaires avant de valider
+        # un changement d'état (anti-bruit).
+        self._consecutive_required = max(1, int(consecutive_required))
+
+        # État "stabilisé"
+        self._last_present = False
         self._last_uid = ""
+
+        # Compteurs pour lisser les lectures instables
+        self._present_count = 0
+        self._absent_count = 0
+        self._initialized = False
 
     def _read_raw(self):
         """
@@ -71,35 +81,60 @@ class NFCSensor:
 
     def step(self):
         """
-        Met à jour l'état de présence et détecte les événements insert/remove.
+        Met à jour l'état de présence et détecte les événements insert/remove
+        avec un peu d'anti-rebond pour éviter les boucles insert/remove
+        dues aux lectues instables du MFRC522.
         """
         present, uid = self._read_raw()
 
         # Premier appel : on initialise simplement l'état
-        if self._last_present is None:
-            self._last_present = present
-            self._last_uid = uid
-            return present, uid, None
+        if not self._initialized:
+            self._initialized = True
+            self._last_present = bool(present)
+            self._last_uid = uid or ""
+            if present:
+                self._present_count = 1
+                self._absent_count = 0
+            else:
+                self._present_count = 0
+                self._absent_count = 1
+            return self._last_present, self._last_uid, None
+
+        # Mise à jour des compteurs de présence/absence consécutives
+        if present:
+            self._present_count += 1
+            self._absent_count = 0
+        else:
+            self._absent_count += 1
+            self._present_count = 0
 
         event = None
 
-        # Changement d'état de présence
-        if present and not self._last_present:
+        # Validation d'une insertion après plusieurs lectures consécutives "présent"
+        if present and not self._last_present and self._present_count >= self._consecutive_required:
+            self._last_present = True
+            if uid:
+                self._last_uid = uid
             event = "insert"
-        elif not present and self._last_present:
+
+        # Validation d'un retrait après plusieurs lectures consécutives "absent"
+        elif not present and self._last_present and self._absent_count >= self._consecutive_required:
+            self._last_present = False
+            self._last_uid = ""
             event = "remove"
-        # Carte toujours présente mais UID qui change (changement de carte)
+
+        # Carte considérée comme présente, mais UID qui change (on a changé de carte)
         elif present and self._last_present and uid and uid != self._last_uid:
-            event = "insert"
+            # On exige aussi quelques lectures cohérentes pour éviter les glitches
+            if self._present_count >= self._consecutive_required:
+                self._last_uid = uid
+                event = "insert"
 
-        self._last_present = present
-        if present and uid:
+        # Si la carte est stablement présente, on met à jour l'UID dès qu'on a une lecture valide
+        if self._last_present and uid:
             self._last_uid = uid
-        elif not present:
-            uid = ""
 
-        return present, self._last_uid if self._last_uid else "", event
+        return self._last_present, self._last_uid if self._last_uid else "", event
 
 
 nfcsensor = NFCSensor()
-
