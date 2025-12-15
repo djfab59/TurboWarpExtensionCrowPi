@@ -8,6 +8,11 @@ from bridge.routes.vibration import vibration_bp
 from bridge.routes.relay import relay_bp
 from bridge.routes.segment import segment_bp
 from bridge.routes.ultrasonicsensor import ultrasonicsensor_bp
+from bridge.routes.nfcsensor import nfcsensor_bp
+from bridge.routes.servo import servo_bp
+from bridge.routes.stepmotor import stepmotor_bp
+from bridge.routes.music import music_bp
+from bridge.routes.nfcsensor import nfcsensor_bp
 
 app = Flask(__name__)
 
@@ -30,3 +35,7 @@ app.register_blueprint(vibration_bp)
 app.register_blueprint(relay_bp)
 app.register_blueprint(segment_bp)
 app.register_blueprint(ultrasonicsensor_bp)
+app.register_blueprint(nfcsensor_bp)
+app.register_blueprint(servo_bp)
+app.register_blueprint(stepmotor_bp)
+app.register_blueprint(music_bp)

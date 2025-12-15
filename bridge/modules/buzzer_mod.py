@@ -5,7 +5,7 @@ from typing import Any, Optional
 from gpiozero import TonalBuzzer
 from gpiozero.tones import Tone
 
-from bridge.modules.melodies import MELODIES
+from bridge.modules.ressources.melodies import MELODIES
 
 
 class Buzzer:

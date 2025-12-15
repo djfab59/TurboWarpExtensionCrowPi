@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple, Optional
 
 from elecrow_ws281x import PixelStrip, Color
 
-from bridge.modules.emojis import EMOJIS
+from bridge.modules.ressources.emojis import EMOJIS
 
 
 class LedMatrix:
