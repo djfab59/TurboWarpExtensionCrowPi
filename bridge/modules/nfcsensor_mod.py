@@ -18,7 +18,7 @@ class NFCSensor:
         event   : "insert", "remove" ou None
     """
 
-    def __init__(self, hold_s=0.5):
+    def __init__(self, hold_s=0.5, uid_poll_s=0.25, uid_retries=3, uid_retry_sleep_s=0.01):
         if SimpleMFRC522 is not None:
             try:
                 self.reader = SimpleMFRC522()
@@ -36,26 +36,49 @@ class NFCSensor:
         self.hold_s = float(hold_s)
         self._stable_present = False
         self._last_seen_present_at = None
+        self._uid = ""
+        self._last_uid_attempt_at = 0.0
 
-    def _read_raw(self):
+        # Lecture UID (optionnelle) : on limite la fréquence et on retente
+        # quelques fois sans impacter la détection de présence.
+        self.uid_poll_s = float(uid_poll_s)
+        self.uid_retries = max(1, int(uid_retries))
+        self.uid_retry_sleep_s = float(uid_retry_sleep_s)
+
+    def _read_raw(self, read_uid=False):
         """
         Lecture "non bloquante" simplifiée :
         - si aucune carte / erreur : (False, "")
-        - sinon : (True, uid_str) — dans la version simplifiée actuelle,
-          on ne lit plus l'UID pour éviter les instabilités, donc uid_str
-          sera systématiquement "".
+        - sinon : (True, uid_str) ; l'UID peut être "" si la lecture UID échoue
+          (sans impacter la présence).
         """
         if self._mfrc is None:
             return False, ""
 
         try:
-            # Requête de présence uniquement (on ne lit plus l'UID ici)
-            error, data = self._mfrc.MFRC522_Request(self._mfrc.PICC_REQIDL)
+            # Requête de présence
+            error, _data = self._mfrc.MFRC522_Request(self._mfrc.PICC_REQIDL)
             if error:
                 return False, ""
 
-            # On considère simplement qu'une carte est présente si la requête réussit
-            return True, ""
+            if not read_uid:
+                return True, ""
+
+            uid_str = ""
+            for attempt in range(self.uid_retries):
+                error, uid = self._mfrc.MFRC522_Anticoll()
+                if not error and isinstance(uid, (list, tuple)) and len(uid) >= 4:
+                    uid_str = "%02X:%02X:%02X:%02X" % (
+                        int(uid[0]),
+                        int(uid[1]),
+                        int(uid[2]),
+                        int(uid[3]),
+                    )
+                    break
+                if attempt < self.uid_retries - 1:
+                    time.sleep(self.uid_retry_sleep_s)
+
+            return True, uid_str
         except Exception:
             return False, ""
 
@@ -63,10 +86,24 @@ class NFCSensor:
         """
         Met à jour l'état de présence et détecte les événements insert/remove.
         """
-        present, _ = self._read_raw()
-
         now = time.time()
         event = None
+
+        # On tente de lire l'UID au moment de l'insert, puis périodiquement
+        # tant qu'on n'a pas d'UID (sans spammer).
+        want_uid = (not self._stable_present) or (
+            self._stable_present
+            and not self._uid
+            and (now - self._last_uid_attempt_at) >= self.uid_poll_s
+        )
+
+        present, uid = self._read_raw(read_uid=want_uid)
+        if want_uid and present:
+            self._last_uid_attempt_at = now
+
+        prev_uid = self._uid
+        if uid:
+            self._uid = uid
 
         if present:
             # On a vu une carte récemment
@@ -82,10 +119,14 @@ class NFCSensor:
                 if last is None or (now - last) >= self.hold_s:
                     self._stable_present = False
                     self._last_seen_present_at = None
+                    self._uid = ""
                     event = "remove"
 
-        # On ne gère pas l'UID pour l'instant (toujours chaîne vide)
-        return self._stable_present, "", event
+        # UID obtenu après l'insert : on envoie une mise à jour sans retrigger le chapeau Scratch
+        if self._stable_present and self._uid and self._uid != prev_uid and event is None:
+            event = "update"
+
+        return self._stable_present, self._uid if self._stable_present else "", event
 
 
 nfcsensor = NFCSensor()
