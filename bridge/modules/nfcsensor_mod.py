@@ -18,7 +18,7 @@ class NFCSensor:
         event   : "insert", "remove" ou None
     """
 
-    def __init__(self, debounce_s=0.05):
+    def __init__(self):
         if SimpleMFRC522 is not None:
             try:
                 self.reader = SimpleMFRC522()
@@ -31,10 +31,6 @@ class NFCSensor:
             self.reader = None
             self._mfrc = None
 
-        # Petit délai d'anti-rebond lors d'un changement d'état.
-        self.debounce_s = debounce_s
-
-        # État précédent (None = non initialisé)
         self._last_present = None
         self._last_uid = ""
 
@@ -42,85 +38,54 @@ class NFCSensor:
         """
         Lecture "non bloquante" simplifiée :
         - si aucune carte / erreur : (False, "")
-        - sinon : (True, uid_str)
+        - sinon : (True, uid_str) — dans la version simplifiée actuelle,
+          on ne lit plus l'UID pour éviter les instabilités, donc uid_str
+          sera systématiquement "".
         """
         if self._mfrc is None:
             return False, ""
 
         try:
-            # Requête de présence
+            # Requête de présence uniquement (on ne lit plus l'UID ici)
             error, data = self._mfrc.MFRC522_Request(self._mfrc.PICC_REQIDL)
             if error:
                 return False, ""
 
-            # Anti-collision pour récupérer l'UID
-            error, uid = self._mfrc.MFRC522_Anticoll()
-            if error:
-                return False, ""
-
-            # UID sous forme de chaîne lisible
-            if isinstance(uid, (list, tuple)) and len(uid) >= 4:
-                uid_str = "%02X:%02X:%02X:%02X" % (
-                    int(uid[0]),
-                    int(uid[1]),
-                    int(uid[2]),
-                    int(uid[3]),
-                )
-            else:
-                uid_str = ""
-
-            return True, uid_str
+            # On considère simplement qu'une carte est présente si la requête réussit
+            return True, ""
         except Exception:
             return False, ""
 
     def step(self):
         """
         Met à jour l'état de présence et détecte les événements insert/remove.
-        Un petit anti-rebond temporel est appliqué lorsqu'on détecte un
-        changement de présence pour filtrer les micro-coupures.
         """
         present, uid = self._read_raw()
 
         # Premier appel : on initialise simplement l'état
         if self._last_present is None:
             self._last_present = present
-            self._last_uid = uid or ""
-            return present, self._last_uid, None
+            self._last_uid = uid
+            return present, uid, None
 
         event = None
 
-        # Changement de présence détecté -> on confirme après un court délai
-        if present != self._last_present:
-            time.sleep(self.debounce_s)
-            present2, uid2 = self._read_raw()
-            # Si finalement l'état n'a pas réellement changé, on ignore
-            if present2 != present:
-                return self._last_present, self._last_uid or "", None
+        # Changement d'état de présence
+        if present and not self._last_present:
+            event = "insert"
+        elif not present and self._last_present:
+            event = "remove"
+        # Carte toujours présente mais UID qui change (changement de carte)
+        elif present and self._last_present and uid and uid != self._last_uid:
+            event = "insert"
 
-            # Changement confirmé
-            present = present2
-            if present:
-                uid = uid2
-
-            if present and not self._last_present:
-                event = "insert"
-            elif not present and self._last_present:
-                event = "remove"
-
-            self._last_present = present
-
-        # Gestion du changement de carte (UID différent alors que la carte est présente)
-        if self._last_present and present and uid:
-            if self._last_uid and uid != self._last_uid:
-                # Nouvelle carte : on signale un "insert" avec le nouvel UID
-                if event is None:
-                    event = "insert"
+        self._last_present = present
+        if present and uid:
             self._last_uid = uid
         elif not present:
-            # Plus de carte présente
-            self._last_uid = ""
+            uid = ""
 
-        return self._last_present, self._last_uid if self._last_uid else "", event
+        return present, self._last_uid if self._last_uid else "", event
 
 
 nfcsensor = NFCSensor()
