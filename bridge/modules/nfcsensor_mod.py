@@ -18,7 +18,7 @@ class NFCSensor:
         event   : "insert", "remove" ou None
     """
 
-    def __init__(self, debounce_s=0.2):
+    def __init__(self, hold_s=0.5):
         if SimpleMFRC522 is not None:
             try:
                 self.reader = SimpleMFRC522()
@@ -31,16 +31,11 @@ class NFCSensor:
             self.reader = None
             self._mfrc = None
 
-        # Durée minimale pendant laquelle un changement doit être
-        # observé avant d'être confirmé (anti-bruit).
-        self.debounce_s = debounce_s
-
-        # État "stabilisé" (celui qu'on expose)
-        self._last_stable_present = False
-
-        # État candidat en cours de validation
-        self._candidate_present = None
-        self._candidate_since = time.time()
+        # Anti-bruit : une fois une carte détectée, on la considère présente
+        # tant qu'on en re-détecte une au moins toutes les hold_s secondes.
+        self.hold_s = float(hold_s)
+        self._stable_present = False
+        self._last_seen_present_at = None
 
     def _read_raw(self):
         """
@@ -73,34 +68,24 @@ class NFCSensor:
         now = time.time()
         event = None
 
-        # Initialisation du candidat
-        if self._candidate_present is None:
-            self._candidate_present = present
-            self._candidate_since = now
-
-        # Si l'état lu diffère de l'état stabilisé,
-        # on attend qu'il reste stable pendant debounce_s.
-        if present != self._last_stable_present:
-            if present != self._candidate_present:
-                # Nouveau candidat : on repart le chrono
-                self._candidate_present = present
-                self._candidate_since = now
-            else:
-                # Même candidat que précédemment : on regarde si ça dure assez longtemps
-                if now - self._candidate_since >= self.debounce_s:
-                    # On confirme le changement
-                    self._last_stable_present = present
-                    if present:
-                        event = "insert"
-                    else:
-                        event = "remove"
+        if present:
+            # On a vu une carte récemment
+            self._last_seen_present_at = now
+            if not self._stable_present:
+                self._stable_present = True
+                event = "insert"
         else:
-            # L'état lu correspond à l'état stabilisé : on reset le candidat
-            self._candidate_present = present
-            self._candidate_since = now
+            # Pas de carte vue à cet instant : on ne confirme "remove"
+            # que si ça dure plus longtemps que hold_s.
+            if self._stable_present:
+                last = self._last_seen_present_at
+                if last is None or (now - last) >= self.hold_s:
+                    self._stable_present = False
+                    self._last_seen_present_at = None
+                    event = "remove"
 
         # On ne gère pas l'UID pour l'instant (toujours chaîne vide)
-        return self._last_stable_present, "", event
+        return self._stable_present, "", event
 
 
 nfcsensor = NFCSensor()
