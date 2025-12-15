@@ -13,12 +13,12 @@ class NFCSensor:
 
     On fournit une API simple orientée présence de carte :
     - step() retourne (present, uid, event) où :
-        present : booléen (carte détectée ou non, état "stabilisé")
+        present : booléen (carte détectée ou non)
         uid     : chaîne UID "xx:xx:xx:xx" ou "" si aucune carte
         event   : "insert", "remove" ou None
     """
 
-    def __init__(self, consecutive_required=5):
+    def __init__(self, debounce_s=0.05):
         if SimpleMFRC522 is not None:
             try:
                 self.reader = SimpleMFRC522()
@@ -31,18 +31,12 @@ class NFCSensor:
             self.reader = None
             self._mfrc = None
 
-        # Nombre de lectures consécutives nécessaires avant de valider
-        # un changement d'état (anti-bruit).
-        self._consecutive_required = max(1, int(consecutive_required))
+        # Petit délai d'anti-rebond lors d'un changement d'état.
+        self.debounce_s = debounce_s
 
-        # État "stabilisé"
-        self._last_present = False
+        # État précédent (None = non initialisé)
+        self._last_present = None
         self._last_uid = ""
-
-        # Compteurs pour lisser les lectures instables
-        self._present_count = 0
-        self._absent_count = 0
-        self._initialized = False
 
     def _read_raw(self):
         """
@@ -81,58 +75,50 @@ class NFCSensor:
 
     def step(self):
         """
-        Met à jour l'état de présence et détecte les événements insert/remove
-        avec un peu d'anti-rebond pour éviter les boucles insert/remove
-        dues aux lectues instables du MFRC522.
+        Met à jour l'état de présence et détecte les événements insert/remove.
+        Un petit anti-rebond temporel est appliqué lorsqu'on détecte un
+        changement de présence pour filtrer les micro-coupures.
         """
         present, uid = self._read_raw()
 
         # Premier appel : on initialise simplement l'état
-        if not self._initialized:
-            self._initialized = True
-            self._last_present = bool(present)
+        if self._last_present is None:
+            self._last_present = present
             self._last_uid = uid or ""
-            if present:
-                self._present_count = 1
-                self._absent_count = 0
-            else:
-                self._present_count = 0
-                self._absent_count = 1
-            return self._last_present, self._last_uid, None
-
-        # Mise à jour des compteurs de présence/absence consécutives
-        if present:
-            self._present_count += 1
-            self._absent_count = 0
-        else:
-            self._absent_count += 1
-            self._present_count = 0
+            return present, self._last_uid, None
 
         event = None
 
-        # Validation d'une insertion après plusieurs lectures consécutives "présent"
-        if present and not self._last_present and self._present_count >= self._consecutive_required:
-            self._last_present = True
-            if uid:
-                self._last_uid = uid
-            event = "insert"
+        # Changement de présence détecté -> on confirme après un court délai
+        if present != self._last_present:
+            time.sleep(self.debounce_s)
+            present2, uid2 = self._read_raw()
+            # Si finalement l'état n'a pas réellement changé, on ignore
+            if present2 != present:
+                return self._last_present, self._last_uid or "", None
 
-        # Validation d'un retrait après plusieurs lectures consécutives "absent"
-        elif not present and self._last_present and self._absent_count >= self._consecutive_required:
-            self._last_present = False
-            self._last_uid = ""
-            event = "remove"
+            # Changement confirmé
+            present = present2
+            if present:
+                uid = uid2
 
-        # Carte considérée comme présente, mais UID qui change (on a changé de carte)
-        elif present and self._last_present and uid and uid != self._last_uid:
-            # On exige aussi quelques lectures cohérentes pour éviter les glitches
-            if self._present_count >= self._consecutive_required:
-                self._last_uid = uid
+            if present and not self._last_present:
                 event = "insert"
+            elif not present and self._last_present:
+                event = "remove"
 
-        # Si la carte est stablement présente, on met à jour l'UID dès qu'on a une lecture valide
-        if self._last_present and uid:
+            self._last_present = present
+
+        # Gestion du changement de carte (UID différent alors que la carte est présente)
+        if self._last_present and present and uid:
+            if self._last_uid and uid != self._last_uid:
+                # Nouvelle carte : on signale un "insert" avec le nouvel UID
+                if event is None:
+                    event = "insert"
             self._last_uid = uid
+        elif not present:
+            # Plus de carte présente
+            self._last_uid = ""
 
         return self._last_present, self._last_uid if self._last_uid else "", event
 
