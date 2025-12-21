@@ -1,28 +1,29 @@
-import pigpio
+#!/usr/bin/env python3
 import time
+from gpiozero import InputDevice
 
-PIN = 20
-pi = pigpio.pi()
+PIN = 20  # GPIO du récepteur IR sur le CrowPi (à adapter si besoin)
 
-pi.set_mode(PIN, pigpio.INPUT)
+ir = InputDevice(PIN)
 
-last_tick = 0
-pulses = []
+print("IR debug sur GPIO", PIN)
+print("Appuie sur des boutons de la télécommande (Ctrl+C pour quitter)\n")
 
-def cbf(gpio, level, tick):
-    global last_tick, pulses
-    if last_tick:
-        pulses.append(pigpio.tickDiff(last_tick, tick))
-    last_tick = tick
-
-cb = pi.callback(PIN, pigpio.EITHER_EDGE, cbf)
+last_state = ir.value
+last_time = time.time()
 
 try:
     while True:
-        time.sleep(0.1)
-        if len(pulses) > 60:
-            print("Pulses:", pulses)
-            pulses.clear()
+        v = ir.value
+        if v != last_state:
+            now = time.time()
+            dt_ms = (now - last_time) * 1000.0
+            level = "LOW " if v == 0 else "HIGH"
+            print(f"{now:.6f}  {level}  (Δ ≈ {dt_ms:6.2f} ms)")
+            last_state = v
+            last_time = now
+
+        # petit sleep pour ne pas saturer le CPU
+        time.sleep(0.0005)
 except KeyboardInterrupt:
-    cb.cancel()
-    pi.stop()
+    print("\nArrêt demandé, bye.")
