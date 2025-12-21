@@ -6,6 +6,12 @@ except Exception:
     # Permet d'importer le module sur une machine sans GPIO
     Servo = None
 
+try:
+    from gpiozero.pins.pigpio import PiGPIOFactory
+except Exception:
+    # pigpio est optionnel (meilleur PWM si pigpiod est lancé)
+    PiGPIOFactory = None
+
 
 class ServoController:
     """
@@ -24,6 +30,29 @@ class ServoController:
         }
         self._servos: dict[int, Optional["Servo"]] = {}
         self._angles: dict[int, float] = {}
+        self._pigpio_factory = None
+        self._pigpio_checked = False
+
+    def _get_pigpio_factory(self):
+        """
+        Retourne une PiGPIOFactory si pigpio est dispo + pigpiod tourne.
+        Sinon None (fallback gpiozero classique).
+        """
+        if self._pigpio_checked:
+            return self._pigpio_factory
+
+        self._pigpio_checked = True
+
+        if PiGPIOFactory is None:
+            self._pigpio_factory = None
+            return None
+
+        try:
+            self._pigpio_factory = PiGPIOFactory()
+        except Exception:
+            self._pigpio_factory = None
+
+        return self._pigpio_factory
 
     def _ensure_servo(self, servo_id: int) -> Optional["Servo"]:
         if Servo is None:
@@ -35,7 +64,11 @@ class ServoController:
 
         if servo_id not in self._servos or self._servos[servo_id] is None:
             try:
-                self._servos[servo_id] = Servo(pin)
+                factory = self._get_pigpio_factory()
+                if factory is not None:
+                    self._servos[servo_id] = Servo(pin, pin_factory=factory)
+                else:
+                    self._servos[servo_id] = Servo(pin)
             except Exception:
                 self._servos[servo_id] = None
 
@@ -88,6 +121,26 @@ class ServoController:
             return
         self.set_angle(servo_id, angle)
 
+    def release(self, servo_id: int) -> None:
+        """
+        "Relâche" le servo : stoppe l'envoi PWM pour libérer le moteur.
+        """
+        servo = self._servos.get(servo_id)
+        if servo is None:
+            return
+
+        try:
+            # gpiozero.Servo expose normalement detach(), sinon value=None fait pareil.
+            if hasattr(servo, "detach"):
+                servo.detach()
+            else:
+                servo.value = None
+        except Exception:
+            try:
+                servo.value = None
+            except Exception:
+                pass
+
     def get_angle(self, servo_id: int) -> Optional[float]:
         if servo_id in self._angles:
             return self._angles[servo_id]
@@ -105,4 +158,3 @@ class ServoController:
 
 
 servo_controller = ServoController()
-

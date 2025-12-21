@@ -51,6 +51,17 @@
                 defaultValue: 1
               }
             }
+          },
+          {
+            opcode: 'release',
+            blockType: Scratch.BlockType.COMMAND,
+            text: 'lâcher le servo [ID] (PWM off)',
+            arguments: {
+              ID: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 1
+              }
+            }
           }
         ],
         menus: {
@@ -113,8 +124,24 @@
       }
       return 0;
     }
+
+    async release (args) {
+      const id = Number(args.ID || 1);
+      try {
+        await fetch('http://127.0.0.1:3232/servo/release', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id
+          })
+        });
+      } catch (e) {
+        // ignore errors
+      }
+    }
   }
 
   Scratch.extensions.register(new CrowPiServo());
 })(Scratch);
-

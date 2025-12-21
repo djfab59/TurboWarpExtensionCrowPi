@@ -57,3 +57,16 @@ def get_angle():
 
     return jsonify(ok=True, angle=round(float(angle), 1))
 
+
+@servo_bp.route("/release", methods=["POST", "OPTIONS"])
+def release():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    data = request.get_json(silent=True) or {}
+    servo_id = int(data.get("id", 1))
+
+    with servo_lock:
+        servo_controller.release(servo_id)
+
+    return jsonify(ok=True)
