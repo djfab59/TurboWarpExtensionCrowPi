@@ -1,4 +1,6 @@
 import time
+import threading
+from collections import deque
 
 try:
     from gpiozero import InputDevice
@@ -9,17 +11,26 @@ except Exception:
 
 class IRSensor:
     """
-    Décodage simple de la télécommande IR CrowPi (protocole type NEC).
+    Décodage de la télécommande IR CrowPi (protocole type NEC) basé sur les
+    fronts (mesure de durées), inspiré de `test.py`.
 
-    On expose une API step() qui essaie de décoder une trame complète :
-    - si aucune trame valide n'est détectée : retourne (None, None)
-    - sinon : retourne (raw_code, name) où :
-        raw_code : valeur entière (octet de données, ex 0x45)
-        name     : nom logique ("CH_MINUS", "CH", "CH_PLUS", "NUM_0", etc.)
+    Objectif : éviter le décodage "au timing" à la volée dans step(), trop
+    sensible au scheduling. On lance un thread qui écoute les changements
+    d'état et reconstruit les trames en continu, puis step() dépile les events.
     """
 
-    def __init__(self, pin: int = 20):
+    def __init__(
+        self,
+        pin: int = 20,
+        sample_interval_s: float = 0.0002,
+        frame_timeout_s: float = 0.12,
+        queue_maxlen: int = 32,
+        emit_repeats: bool = False,
+    ):
         self.pin = pin
+        self.sample_interval_s = sample_interval_s
+        self.frame_timeout_s = frame_timeout_s
+        self.emit_repeats = bool(emit_repeats)
         if InputDevice is not None:
             try:
                 self.device = InputDevice(pin)
@@ -53,6 +64,25 @@ class IRSensor:
             0x4A: "NUM_9",
         }
 
+        self._queue = deque(maxlen=int(queue_maxlen))
+        self._queue_lock = threading.Lock()
+
+        self._stop_event = threading.Event()
+        self._thread = None
+
+        self._decoder_state = "IDLE"
+        self._bits = []
+        self._last_command = None
+        self._last_frame_time_s = 0.0
+
+        if self.device is not None:
+            self._thread = threading.Thread(
+                target=self._reader_loop,
+                name="IRSensorReader",
+                daemon=True,
+            )
+            self._thread.start()
+
     def _value(self) -> int:
         if self.device is None:
             return 1
@@ -61,64 +91,147 @@ class IRSensor:
         except Exception:
             return 1
 
-    def _decode_once(self):
-        """
-        Tentative de décodage d'une trame IR.
-        Retourne raw code (data[2]) ou None.
-        Implémentation adaptée de Remote_controller_copy.py (boucles de timing).
-        """
-        if self._value() != 0:
-            return None
+    @staticmethod
+    def _in_range(value_us: int, min_us: int, max_us: int) -> bool:
+        return min_us <= value_us <= max_us
 
-        count = 0
-        while self._value() == 0 and count < 200:
-            count += 1
-            time.sleep(0.00006)
+    def _reset_decoder(self) -> None:
+        self._decoder_state = "IDLE"
+        self._bits = []
 
-        count = 0
-        while self._value() == 1 and count < 80:
-            count += 1
-            time.sleep(0.00006)
+    def _push_event(self, raw_code: int) -> None:
+        name = self.key_names.get(raw_code)
+        if not name:
+            return
+        with self._queue_lock:
+            self._queue.append((raw_code, name))
 
-        idx = 0
-        cnt = 0
+    def _finalize_frame(self) -> None:
+        if len(self._bits) < 32:
+            return
+
         data = [0, 0, 0, 0]
-        for _ in range(32):
-            count = 0
-            while self._value() == 0 and count < 15:
-                count += 1
-                time.sleep(0.00006)
+        for i in range(32):
+            if self._bits[i]:
+                data[i // 8] |= 1 << (i % 8)
 
-            count = 0
-            while self._value() == 1 and count < 40:
-                count += 1
-                time.sleep(0.00006)
+        addr, addr_inv, cmd, cmd_inv = data
+        if (addr ^ addr_inv) & 0xFF != 0xFF:
+            return
+        if (cmd ^ cmd_inv) & 0xFF != 0xFF:
+            return
 
-            if count > 8:
-                data[idx] |= 1 << cnt
-            if cnt == 7:
-                cnt = 0
-                idx += 1
+        self._last_command = cmd
+        self._push_event(cmd)
+
+    def _process_segment(self, level: int, duration_us: int) -> None:
+        """
+        Reçoit des segments (niveau stable + durée) et avance l'automate NEC.
+
+        level: 0 (LOW) ou 1 (HIGH) sur le pin IR
+        duration_us: durée (µs) pendant laquelle ce niveau est resté stable
+        """
+        # Filtre très court (glitch / jitter)
+        if duration_us < 80:
+            return
+
+        # Fenêtres tolérantes (polling -> timestamps un peu jittery)
+        leader_low = (7500, 11500)      # ~9000us
+        leader_high = (3000, 6000)      # ~4500us
+        repeat_high = (1500, 3500)      # ~2250us
+        bit_low = (200, 900)            # ~560us
+        bit_high_minmax = (200, 2500)   # 0:~560us / 1:~1690us
+        bit_one_threshold = 1000        # seuil simple entre 0 et 1
+
+        if self._decoder_state == "IDLE":
+            if level == 0 and self._in_range(duration_us, *leader_low):
+                self._decoder_state = "LEADER_HIGH"
+            return
+
+        if self._decoder_state == "LEADER_HIGH":
+            if level != 1:
+                self._reset_decoder()
+                return
+            if self._in_range(duration_us, *leader_high):
+                self._bits = []
+                self._decoder_state = "BIT_LOW"
+                return
+            if self._in_range(duration_us, *repeat_high):
+                self._decoder_state = "REPEAT_LOW"
+                return
+            self._reset_decoder()
+            return
+
+        if self._decoder_state == "REPEAT_LOW":
+            # Repeat frame: leader(9ms low) + space(2.25ms high) + 560us low
+            if level == 0 and self._in_range(duration_us, *bit_low):
+                if self.emit_repeats and self._last_command is not None:
+                    self._push_event(self._last_command)
+            self._reset_decoder()
+            return
+
+        if self._decoder_state == "BIT_LOW":
+            if level == 0 and self._in_range(duration_us, *bit_low):
+                self._decoder_state = "BIT_HIGH"
+                return
+            self._reset_decoder()
+            return
+
+        if self._decoder_state == "BIT_HIGH":
+            if level != 1 or not self._in_range(duration_us, *bit_high_minmax):
+                self._reset_decoder()
+                return
+
+            bit = 1 if duration_us >= bit_one_threshold else 0
+            self._bits.append(bit)
+
+            if len(self._bits) >= 32:
+                self._finalize_frame()
+                self._reset_decoder()
+                return
+
+            self._decoder_state = "BIT_LOW"
+            return
+
+        self._reset_decoder()
+
+    def _reader_loop(self) -> None:
+        last_state = self._value()
+        last_edge_ns = time.monotonic_ns()
+        while not self._stop_event.is_set():
+            state = self._value()
+            now_ns = time.monotonic_ns()
+
+            if state != last_state:
+                duration_us = int((now_ns - last_edge_ns) / 1000)
+                self._process_segment(last_state, duration_us)
+
+                last_state = state
+                last_edge_ns = now_ns
+                self._last_frame_time_s = time.monotonic()
             else:
-                cnt += 1
+                # Si on attend une fin de trame et que ça traîne, reset
+                if (
+                    self._decoder_state != "IDLE"
+                    and (time.monotonic() - self._last_frame_time_s) > self.frame_timeout_s
+                ):
+                    self._reset_decoder()
 
-        if data[0] + data[1] == 0xFF and data[2] + data[3] == 0xFF:
-            raw = data[2]
-            return raw
-
-        return None
+            time.sleep(self.sample_interval_s)
 
     def step(self):
         """
-        Essaie de lire une trame IR complète.
-        Retourne (raw_code, name) ou (None, None) si rien de valide.
-        """
-        raw = self._decode_once()
-        if raw is None:
-            return None, None
+        Dépile un événement IR si disponible.
 
-        name = self.key_names.get(raw)
-        return raw, name
+        Retourne (raw_code, name) ou (None, None) si rien.
+        """
+        with self._queue_lock:
+            if not self._queue:
+                return None, None
+            return self._queue.popleft()
+
+    def close(self) -> None:
+        self._stop_event.set()
 
 
 ir_sensor = IRSensor()
