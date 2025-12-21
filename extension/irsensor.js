@@ -4,6 +4,7 @@
   class CrowPiIRSensor {
     constructor () {
       this._pendingEvents = [];
+      this._lastButtonName = '';
 
       this.debug = typeof window !== 'undefined' &&
         window.location &&
@@ -125,6 +126,11 @@
             opcode: 'when200Plus',
             blockType: Scratch.BlockType.HAT,
             text: 'Quand bouton 200+ appuyé'
+          },
+          {
+            opcode: 'lastButton',
+            blockType: Scratch.BlockType.REPORTER,
+            text: 'dernier bouton IR'
           }
         ]
       };
@@ -155,6 +161,7 @@
             }
 
             if (name) {
+              this._lastButtonName = name;
               this._pendingEvents.push({ name });
             }
           } catch (e) {
@@ -267,6 +274,10 @@
 
     when200Plus () {
       return this._consumeEvent('TWOHUNDRED_PLUS');
+    }
+
+    lastButton () {
+      return this._lastButtonName;
     }
   }
 
